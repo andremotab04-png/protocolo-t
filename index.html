@@ -127,6 +127,33 @@
   .guia-sec-title{font-size:11px; letter-spacing:1.5px; text-transform:uppercase; color:var(--amber-light); margin:12px 0 6px;}
   .guia-sec-title:first-child{margin-top:2px;}
 
+  /* CALENDÁRIO */
+  .cal-nav{display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;}
+  .cal-nav-btn{background:var(--bg-card); border:1px solid var(--line); border-radius:8px; color:var(--bone-muted); padding:8px 14px; font-size:14px; cursor:pointer;}
+  .cal-nav-btn:disabled{opacity:0.3; cursor:default;}
+  .cal-month-label{font-family:'Oswald',sans-serif; font-size:17px; font-weight:600; letter-spacing:1px; text-transform:uppercase; color:var(--amber-light);}
+  .cal-weekdays{display:grid; grid-template-columns:repeat(7,1fr); gap:6px; margin-bottom:8px;}
+  .cal-weekday{text-align:center; font-size:10px; letter-spacing:1px; color:var(--bone-muted); text-transform:uppercase;}
+  .cal-grid{display:grid; grid-template-columns:repeat(7,1fr); gap:6px; margin-bottom:20px;}
+  .cal-cell{
+    aspect-ratio:1; border-radius:8px; display:flex; align-items:center; justify-content:center;
+    font-family:'IBM Plex Mono',monospace; font-size:12px; font-weight:600; color:var(--bone-muted);
+    background:var(--bg-card); border:1px solid var(--line-soft); position:relative; cursor:default;
+  }
+  .cal-cell.outside{opacity:0; pointer-events:none; border:none; background:none;}
+  .cal-cell.in-range{cursor:pointer; color:var(--bone);}
+  .cal-cell.today-marker{box-shadow:inset 0 0 0 2px var(--amber);}
+  .cal-cell .cal-daynum-tag{position:absolute; bottom:2px; right:3px; font-size:7px; color:inherit; opacity:0.65;}
+
+  .cal-legend{display:flex; align-items:center; gap:10px; flex-wrap:wrap; font-size:11px; color:var(--bone-muted); margin-bottom:20px;}
+  .cal-legend-item{display:flex; align-items:center; gap:5px;}
+  .cal-legend-swatch{width:12px; height:12px; border-radius:3px;}
+
+  .cal-summary{background:var(--bg-elev); border:1px solid var(--line); border-radius:14px; padding:16px; margin-bottom:18px; display:flex; gap:18px;}
+  .cal-summary-item{flex:1; text-align:center;}
+  .cal-summary-num{font-family:'IBM Plex Mono',monospace; font-size:22px; font-weight:600; color:var(--amber-light);}
+  .cal-summary-label{font-size:10px; color:var(--bone-muted); letter-spacing:0.5px; text-transform:uppercase; margin-top:3px;}
+
   .loading{text-align:center; padding:60px 0; color:var(--bone-muted); font-family:'IBM Plex Mono',monospace; font-size:13px;}
 
   @media (max-width:420px){ .brand{font-size:32px;} }
@@ -136,6 +163,7 @@
 <div class="wrap" id="app"><div class="loading">carregando...</div></div>
 <div class="tabbar" id="tabbar" style="display:none">
   <button class="tab-btn" data-tab="checklist" onclick="switchTab('checklist')"><span class="tab-icon">✅</span>CHECKLIST</button>
+  <button class="tab-btn" data-tab="calendario" onclick="switchTab('calendario')"><span class="tab-icon">📅</span>CALENDÁRIO</button>
   <button class="tab-btn" data-tab="guia" onclick="switchTab('guia')"><span class="tab-icon">📖</span>GUIA</button>
 </div>
 <script>
@@ -144,17 +172,63 @@ const PROTOCOLO_DATA = {"guia": [{"titulo": "Sono", "icone": "😴", "bullets": 
 const TOTAL_DIAS = 60;
 const CHECKLIST_KEY = 'protocolot-checklist';
 const GUIA_STATE_KEY = 'protocolot-guia-open';
+const STARTDATE_KEY = 'protocolot-startdate';
 
 let checklist = {};      // { "1": {frio:true, sol:false, ...}, "2": {...} }
 let currentTab = 'checklist';
 let selectedDay = 1;
 let openGuiaIdx = null;
+let startDate = null;    // "YYYY-MM-DD" — data do Dia 1
+let calMonthCursor = null; // "YYYY-MM-01" — mês exibido no calendário
+
+function todayISO(d = new Date()){
+  const y = d.getFullYear();
+  const m = String(d.getMonth()+1).padStart(2,'0');
+  const day = String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${day}`;
+}
+
+function addDaysISO(dateStr, n){
+  const [y,m,d] = dateStr.split('-').map(Number);
+  const dt = new Date(y, m-1, d);
+  dt.setDate(dt.getDate()+n);
+  return todayISO(dt);
+}
+
+function diffDaysISO(dateA, dateB){
+  const [ya,ma,da] = dateA.split('-').map(Number);
+  const [yb,mb,db] = dateB.split('-').map(Number);
+  const a = new Date(ya, ma-1, da);
+  const b = new Date(yb, mb-1, db);
+  return Math.round((a - b) / 86400000);
+}
+
+function dayNumberForDate(dateStr){
+  const n = diffDaysISO(dateStr, startDate) + 1;
+  if(n < 1 || n > TOTAL_DIAS) return null;
+  return n;
+}
+
+function dateForDayNumber(n){
+  return addDaysISO(startDate, n - 1);
+}
 
 function loadAll(){
   try{
     const raw = localStorage.getItem(CHECKLIST_KEY);
     if(raw) checklist = JSON.parse(raw);
   }catch(e){ checklist = {}; }
+
+  try{
+    let raw = localStorage.getItem(STARTDATE_KEY);
+    if(!raw){
+      raw = todayISO();
+      localStorage.setItem(STARTDATE_KEY, raw);
+    }
+    startDate = raw;
+  }catch(e){ startDate = todayISO(); }
+
+  calMonthCursor = startDate.slice(0,8) + '01';
 }
 
 function saveChecklist(){
@@ -255,7 +329,10 @@ function renderChecklist(){
 
     <div class="day-panel">
       <div class="day-panel-head">
-        <div class="day-panel-title">Dia ${selectedDay}</div>
+        <div>
+          <div class="day-panel-title">Dia ${selectedDay}</div>
+          <div style="font-size:11px; color:var(--bone-muted); margin-top:2px;">${formatDateLongPT(dateForDayNumber(selectedDay))}</div>
+        </div>
         <div class="day-panel-score">${score}/${total}</div>
       </div>
       ${itemsHtml}
@@ -305,6 +382,103 @@ function renderGuia(){
   `;
 }
 
+const MESES_PT = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+const DIAS_SEMANA_PT = ['D','S','T','Q','Q','S','S'];
+
+function shiftMonth(delta){
+  const [y,m] = calMonthCursor.split('-').map(Number);
+  const dt = new Date(y, m-1+delta, 1);
+  calMonthCursor = todayISO(dt).slice(0,8) + '01';
+  render();
+}
+
+function calCellColor(score){
+  if(score === null) return null; // fora do intervalo do protocolo
+  const total = PROTOCOLO_DATA.checkItems.length;
+  if(score === 0) return 'var(--line)';
+  if(score < total * 0.4) return 'var(--blood)';
+  if(score < total * 0.7) return 'var(--rust)';
+  if(score < total) return 'var(--rust-light)';
+  return 'var(--amber)';
+}
+
+function goToDayFromCalendar(n){
+  selectedDay = n;
+  switchTab('checklist');
+}
+
+function renderCalendario(){
+  const [cy, cm] = calMonthCursor.split('-').map(Number);
+  const firstOfMonth = new Date(cy, cm-1, 1);
+  const startWeekday = firstOfMonth.getDay(); // 0=domingo
+  const daysInMonth = new Date(cy, cm, 0).getDate();
+
+  const endDate = addDaysISO(startDate, TOTAL_DIAS - 1);
+  const minMonth = startDate.slice(0,7);
+  const maxMonth = endDate.slice(0,7);
+  const curMonth = calMonthCursor.slice(0,7);
+
+  let cellsHtml = '';
+  for(let i = 0; i < startWeekday; i++){
+    cellsHtml += `<div class="cal-cell outside"></div>`;
+  }
+  for(let d = 1; d <= daysInMonth; d++){
+    const dateStr = `${cy}-${String(cm).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const dayNum = dayNumberForDate(dateStr);
+    const isToday = dateStr === todayISO();
+    if(dayNum === null){
+      cellsHtml += `<div class="cal-cell" style="opacity:0.25">${d}</div>`;
+    } else {
+      const score = scoreOfDay(dayNum);
+      const color = calCellColor(score);
+      cellsHtml += `
+        <div class="cal-cell in-range ${isToday ? 'today-marker' : ''}" style="background:${color}" onclick="goToDayFromCalendar(${dayNum})" title="Dia ${dayNum}">
+          ${d}
+          <span class="cal-daynum-tag">D${dayNum}</span>
+        </div>`;
+    }
+  }
+
+  const completeDays = countCompleteDays();
+  const currentDayNum = dayNumberForDate(todayISO());
+
+  return `
+    <div class="page-title">Calendário</div>
+    <div class="page-sub">Visão macro desde o Dia 1 — ${formatDateLongPT(startDate)}.</div>
+
+    <div class="cal-summary">
+      <div class="cal-summary-item"><div class="cal-summary-num">${currentDayNum || '—'}</div><div class="cal-summary-label">Dia atual</div></div>
+      <div class="cal-summary-item"><div class="cal-summary-num">${completeDays}</div><div class="cal-summary-label">Dias completos</div></div>
+      <div class="cal-summary-item"><div class="cal-summary-num">${TOTAL_DIAS - completeDays}</div><div class="cal-summary-label">Restantes</div></div>
+    </div>
+
+    <div class="cal-nav">
+      <button class="cal-nav-btn" onclick="shiftMonth(-1)" ${curMonth <= minMonth ? 'disabled' : ''}>‹</button>
+      <div class="cal-month-label">${MESES_PT[cm-1]} ${cy}</div>
+      <button class="cal-nav-btn" onclick="shiftMonth(1)" ${curMonth >= maxMonth ? 'disabled' : ''}>›</button>
+    </div>
+
+    <div class="cal-weekdays">${DIAS_SEMANA_PT.map(d => `<div class="cal-weekday">${d}</div>`).join('')}</div>
+    <div class="cal-grid">${cellsHtml}</div>
+
+    <div class="cal-legend">
+      <div class="cal-legend-item"><span class="cal-legend-swatch" style="background:var(--line)"></span>0 marcados</div>
+      <div class="cal-legend-item"><span class="cal-legend-swatch" style="background:var(--blood)"></span>fraco</div>
+      <div class="cal-legend-item"><span class="cal-legend-swatch" style="background:var(--rust)"></span>médio</div>
+      <div class="cal-legend-item"><span class="cal-legend-swatch" style="background:var(--rust-light)"></span>bom</div>
+      <div class="cal-legend-item"><span class="cal-legend-swatch" style="background:var(--amber)"></span>7/7</div>
+    </div>
+
+    <footer>Toca em qualquer dia dentro do protocolo pra abrir e editar o checklist daquele dia.</footer>
+  `;
+}
+
+function formatDateLongPT(dateStr){
+  const [y,m,d] = dateStr.split('-').map(Number);
+  const dt = new Date(y, m-1, d);
+  return dt.toLocaleDateString('pt-BR', {day:'numeric', month:'long', year:'numeric'});
+}
+
 function switchTab(tab){
   currentTab = tab;
   render();
@@ -313,7 +487,9 @@ function switchTab(tab){
 
 function render(){
   const app = document.getElementById('app');
-  app.innerHTML = currentTab === 'checklist' ? renderChecklist() : renderGuia();
+  if(currentTab === 'checklist') app.innerHTML = renderChecklist();
+  else if(currentTab === 'calendario') app.innerHTML = renderCalendario();
+  else app.innerHTML = renderGuia();
   document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.tab === currentTab));
 }
 
