@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Protocolo T">
+<meta name="theme-color" content="#15130F">
+<title>Protocolo T</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Work+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#15130F;
+    --bg-elev:#1E1B14;
+    --bg-card:#242018;
+    --line:#3A3323;
+    --line-soft:#2B2719;
+    --bone:#EEE6D6;
+    --bone-muted:#9C9280;
+    --amber:#D9A32C;
+    --amber-light:#EBC468;
+    --rust:#A8461F;
+    --rust-light:#C96B3E;
+    --blood:#7A2E28;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    background:
+      radial-gradient(ellipse 900px 500px at 50% -8%, rgba(217,163,44,0.10), transparent 60%),
+      var(--bg);
+    color:var(--bone);
+    font-family:'Work Sans', sans-serif;
+    min-height:100vh;
+    padding:24px 16px 96px;
+  }
+  .wrap{max-width:640px; margin:0 auto;}
+
+  header{margin-bottom:22px; text-align:center;}
+  .brand{
+    font-family:'Oswald', sans-serif;
+    font-weight:700;
+    font-size:40px;
+    letter-spacing:3px;
+    text-transform:uppercase;
+    color:var(--amber-light);
+  }
+  .brand-sub{font-size:11px; letter-spacing:3px; text-transform:uppercase; color:var(--bone-muted); margin-top:4px;}
+
+  .tabbar{
+    position:fixed; bottom:0; left:0; right:0;
+    background:var(--bg-elev); border-top:1px solid var(--line);
+    display:flex; padding:10px 12px calc(10px + env(safe-area-inset-bottom)); z-index:50;
+  }
+  .tab-btn{
+    flex:1; background:none; border:none; cursor:pointer;
+    display:flex; flex-direction:column; align-items:center; gap:3px;
+    padding:6px 4px; color:var(--bone-muted); font-size:11px; letter-spacing:0.5px;
+  }
+  .tab-btn .tab-icon{font-size:20px;}
+  .tab-btn.active{color:var(--amber-light);}
+
+  /* progresso geral */
+  .progress-panel{
+    background:var(--bg-elev); border:1px solid var(--line); border-radius:16px;
+    padding:18px; margin-bottom:18px; display:flex; align-items:center; gap:16px;
+  }
+  .progress-ring-holder{position:relative; width:76px; height:76px; flex-shrink:0;}
+  .progress-ring{width:76px; height:76px; border-radius:50%; background:conic-gradient(var(--amber) calc(var(--pct,0) * 1%), var(--line) 0); display:flex; align-items:center; justify-content:center;}
+  .progress-ring-inner{width:58px; height:58px; border-radius:50%; background:var(--bg-elev); display:flex; align-items:center; justify-content:center; flex-direction:column;}
+  .progress-ring-num{font-family:'IBM Plex Mono',monospace; font-size:15px; font-weight:600;}
+  .progress-info{flex:1;}
+  .progress-title{font-size:13px; color:var(--bone-muted); margin-bottom:3px;}
+  .progress-days{font-family:'IBM Plex Mono',monospace; font-size:20px; font-weight:600; color:var(--amber-light);}
+
+  /* seletor de dias */
+  .day-scroll{display:flex; gap:6px; overflow-x:auto; padding-bottom:10px; margin-bottom:14px;}
+  .day-pill{
+    flex-shrink:0; width:42px; height:42px; border-radius:10px; display:flex; align-items:center; justify-content:center;
+    font-family:'IBM Plex Mono',monospace; font-size:12px; font-weight:600; cursor:pointer;
+    background:var(--bg-card); border:1px solid var(--line); color:var(--bone-muted); position:relative;
+  }
+  .day-pill.selected{border-color:var(--amber); color:var(--amber-light); border-width:2px;}
+  .day-pill.complete{background:var(--rust); color:var(--bone); border-color:var(--rust);}
+  .day-pill.complete.selected{border-color:var(--amber);}
+
+  /* checklist do dia */
+  .day-panel{background:var(--bg-elev); border:1px solid var(--line); border-radius:16px; padding:18px; margin-bottom:20px;}
+  .day-panel-head{display:flex; justify-content:space-between; align-items:baseline; margin-bottom:14px;}
+  .day-panel-title{font-family:'Oswald', sans-serif; font-size:20px; font-weight:600; letter-spacing:1px; text-transform:uppercase;}
+  .day-panel-score{font-family:'IBM Plex Mono',monospace; font-size:13px; color:var(--bone-muted);}
+  .check-card{
+    display:flex; align-items:center; gap:14px; background:var(--bg-card); border:1px solid var(--line);
+    border-radius:12px; padding:13px 15px; margin-bottom:8px; cursor:pointer; user-select:none;
+  }
+  .check-card.done{background:rgba(168,70,31,0.15); border-color:var(--rust);}
+  .check-icon{font-size:19px; flex-shrink:0;}
+  .check-label{font-size:14px; font-weight:600; flex:1;}
+  .check-card.done .check-label{color:var(--amber-light);}
+  .check-tick{width:22px; height:22px; border-radius:6px; border:2px solid var(--line); flex-shrink:0; display:flex; align-items:center; justify-content:center;}
+  .check-card.done .check-tick{background:var(--amber); border-color:var(--amber);}
+  .check-tick svg{width:13px; height:13px; opacity:0;}
+  .check-card.done .check-tick svg{opacity:1;}
+
+  .nav-buttons{display:flex; gap:8px; margin-top:4px;}
+  .nav-btn{flex:1; padding:10px; border-radius:8px; border:1px solid var(--line); background:var(--bg-card); color:var(--bone-muted); font-size:12px; cursor:pointer;}
+  .nav-btn:active{border-color:var(--amber);}
+
+  footer{margin-top:24px; text-align:center; font-size:12px; line-height:1.6; color:var(--bone-muted); padding:0 16px;}
+  footer strong{color:var(--amber-light);}
+
+  /* GUIA */
+  .page-title{font-family:'Oswald', sans-serif; font-weight:700; font-size:28px; letter-spacing:1px; text-transform:uppercase; margin-bottom:4px;}
+  .page-sub{font-size:13px; color:var(--bone-muted); margin-bottom:18px;}
+  .guia-card{background:var(--bg-elev); border:1px solid var(--line); border-radius:14px; margin-bottom:10px; overflow:hidden;}
+  .guia-head{padding:15px 16px; display:flex; align-items:center; gap:10px; cursor:pointer;}
+  .guia-head-icon{font-size:19px;}
+  .guia-head-title{font-size:15px; font-weight:600; flex:1; font-family:'Oswald',sans-serif; letter-spacing:0.5px; text-transform:uppercase;}
+  .guia-chevron{color:var(--bone-muted); font-size:12px; transition:transform 0.2s ease;}
+  .guia-card.open .guia-chevron{transform:rotate(180deg);}
+  .guia-body{display:none; padding:0 16px 16px;}
+  .guia-card.open .guia-body{display:block;}
+  .guia-bullet{font-size:13px; color:var(--bone); line-height:1.5; padding:6px 0 6px 14px; border-left:2px solid var(--line-soft); margin-bottom:2px;}
+  .guia-sec-title{font-size:11px; letter-spacing:1.5px; text-transform:uppercase; color:var(--amber-light); margin:12px 0 6px;}
+  .guia-sec-title:first-child{margin-top:2px;}
+
+  .loading{text-align:center; padding:60px 0; color:var(--bone-muted); font-family:'IBM Plex Mono',monospace; font-size:13px;}
+
+  @media (max-width:420px){ .brand{font-size:32px;} }
+</style>
+</head>
+<body>
+<div class="wrap" id="app"><div class="loading">carregando...</div></div>
+<div class="tabbar" id="tabbar" style="display:none">
+  <button class="tab-btn" data-tab="checklist" onclick="switchTab('checklist')"><span class="tab-icon">✅</span>CHECKLIST</button>
+  <button class="tab-btn" data-tab="guia" onclick="switchTab('guia')"><span class="tab-icon">📖</span>GUIA</button>
+</div>
+<script>
+const PROTOCOLO_DATA = {"guia": [{"titulo": "Sono", "icone": "😴", "bullets": ["O sono profundo é quando o corpo produz a maior parte dos hormônios, incluindo testosterona — dormir mal prejudica diretamente esse processo.", "Dormir menos de 5 horas por noite pode reduzir a testosterona em até 15%.", "Privação de sono eleva o cortisol, que compete diretamente com a testosterona.", "Sono ruim também prejudica energia, humor, foco e o rendimento nos treinos."], "dicas": ["Durma e acorde sempre no mesmo horário — o ideal é nem precisar de despertador.", "Quarto limpo, organizado, cama e travesseiro confortáveis.", "Escuridão total (cortina blackout).", "Temperatura fresca no quarto, entre 18-20°C.", "Silêncio — use protetor auricular ou ruído branco se necessário.", "Evite luz azul de telas 2h antes de dormir (ou use óculos com filtro)."]}, {"titulo": "Sol Diário", "icone": "☀️", "bullets": ["A luz solar estimula a produção de vitamina D, que tem papel direto na saúde hormonal.", "Níveis baixos de vitamina D estão associados a níveis mais baixos de testosterona.", "O sol também regula humor e ciclo circadiano — ambos ligados à produção hormonal."], "dicas": ["5 a 30 minutos de sol por dia, sem protetor solar, já costuma ser suficiente.", "Prefira horário próximo ao meio-dia, quando o UVB é mais forte.", "Exponha braços, pernas e tronco.", "Pele clara: comece com menos tempo e aumente aos poucos, pra evitar queimadura.", "Pele mais escura: pode precisar de um pouco mais de tempo.", "Considere medir vitamina D 1x por ano — faixa excelente costuma ficar entre 65-100 ng/ml."]}, {"titulo": "Dieta da Roça", "icone": "🥩", "bullets": ["Abordagem alimentar baseada em comida natural, fresca e não processada.", "Menos processados e conservantes = menos toxinas interferindo no equilíbrio hormonal e na saúde intestinal."], "dicas": ["Princípio 1: coma o que poderia ser produzido na roça.", "Princípio 2: priorize alimentos densos em nutrientes.", "Princípio 3: na dúvida, coma proteína.", "Princípio 4: frutas são aliadas.", "Princípio 5: respeite fome e saciedade naturais — sem forçar nem restringir demais."]}, {"titulo": "Treino de Força", "icone": "🏋️", "bullets": ["Treino de força pesado estimula diretamente a produção de testosterona.", "O que importa não é ir à academia por ir — é progressão de carga real ao longo do tempo.", "Exercícios multiarticulares e livres têm prioridade sobre isolados e de máquina."], "dicas": ["Aumente o peso gradualmente — parar na mesma carga trava o progresso.", "Divisão sugerida: PPL (Push / Pull / Legs).", "Peito: supino reto/inclinado (barra ou halteres), paralelas.", "Pernas: agachamento livre, frontal, zercher, passadas, terra, stiff.", "Ombro: desenvolvimento, rotação com carga.", "Costas: barra fixa, terra, remada baixa e unilateral.", "Abdômen: farmer walk unilateral, abdominal com rodinha.", "Deixe 1-2 repetições de reserva em cada série — não precisa ir à falha absoluta. Isso evita excesso de cortisol e melhora sua recuperação."]}, {"titulo": "Exposição ao Frio", "icone": "🧊", "bullets": ["O frio ativa o sistema nervoso simpático, o que ajuda a estimular a produção de testosterona.", "Também melhora circulação, reduz inflamação e fortalece o calejamento mental."], "dicas": ["Banho gelado diário — modo gradual (começa morno e vai esfriando) ou modo direto (entra direto na água fria, respiração controlada).", "Imersão no gelo 1x por semana: água entre 1-10°C, começando com 3-5 min e evoluindo até 5-10 min.", "Mantenha respiração profunda e controlada durante todo o processo."]}, {"titulo": "Perda de Gordura", "icone": "🔥", "bullets": ["Mais gordura corporal significa mais aromatase, a enzima que converte testosterona em estrogênio.", "Manter o percentual de gordura baixo protege seus níveis de testosterona.", "Isso conecta direto com os princípios da Dieta da Roça."], "dicas": []}, {"titulo": "Zero Álcool", "icone": "🚫", "bullets": ["Álcool eleva o cortisol, que inibe diretamente a produção de testosterona nos testículos.", "Também prejudica sono e recuperação muscular — dois pilares que já afetam a testosterona por conta própria."], "dicas": ["Eliminar ou reduzir bastante o consumo de álcool é um dos ajustes de maior impacto."]}, {"titulo": "Suplementação", "icone": "💊", "bullets": ["Três suplementos com efeito mais direto e consistente na testosterona:"], "dicas": ["Creatina — 5g/dia (melhora força física e aumenta DHT)", "Zinco — 40-50mg/dia (atua diretamente na produção de testosterona)", "Magnésio — 400mg/dia (atua diretamente na produção de testosterona)"]}, {"titulo": "Comportamento", "icone": "🗿", "bullets": ["O comportamento diário também molda o contexto hormonal — pequenas atitudes repetidas todos os dias:"], "dicas": ["Postura de cabeça erguida e autoconfiança", "Intimidade saudável com a parceira", "Não se estressar com o que está fora do seu controle", "Frequentar a natureza com regularidade", "Cuidar da aparência — vestir-se bem, andar cheiroso", "Gratidão pelas coisas simples", "Evitar reclamar de besteira", "Evitar pornografia", "Agir e falar com decisão", "Tomar as decisões importantes que te cabem", "Ter coragem nas escolhas do dia a dia"]}], "checkItems": [{"id": "frio", "label": "Banho Gelado", "icone": "🧊"}, {"id": "sol", "label": "Exposição ao Sol", "icone": "☀️"}, {"id": "dieta", "label": "Dieta", "icone": "🥩"}, {"id": "cardio", "label": "Cardio", "icone": "🏃"}, {"id": "treino", "label": "Treino", "icone": "🏋️"}, {"id": "suplementacao", "label": "Suplementação", "icone": "💊"}, {"id": "descanso", "label": "Descanso", "icone": "😴"}]};
+
+const TOTAL_DIAS = 60;
+const CHECKLIST_KEY = 'protocolot-checklist';
+const GUIA_STATE_KEY = 'protocolot-guia-open';
+
+let checklist = {};      // { "1": {frio:true, sol:false, ...}, "2": {...} }
+let currentTab = 'checklist';
+let selectedDay = 1;
+let openGuiaIdx = null;
+
+function loadAll(){
+  try{
+    const raw = localStorage.getItem(CHECKLIST_KEY);
+    if(raw) checklist = JSON.parse(raw);
+  }catch(e){ checklist = {}; }
+}
+
+function saveChecklist(){
+  try{ localStorage.setItem(CHECKLIST_KEY, JSON.stringify(checklist)); }
+  catch(e){ console.error('Falha ao salvar checklist', e); }
+}
+
+function getDay(n){
+  const key = String(n);
+  if(!checklist[key]) checklist[key] = {};
+  return checklist[key];
+}
+
+function scoreOfDay(n){
+  const day = checklist[String(n)];
+  if(!day) return 0;
+  return PROTOCOLO_DATA.checkItems.filter(it => day[it.id]).length;
+}
+
+function isDayComplete(n){
+  return scoreOfDay(n) === PROTOCOLO_DATA.checkItems.length;
+}
+
+function countCompleteDays(){
+  let c = 0;
+  for(let i = 1; i <= TOTAL_DIAS; i++) if(isDayComplete(i)) c++;
+  return c;
+}
+
+function firstIncompleteDay(){
+  for(let i = 1; i <= TOTAL_DIAS; i++) if(!isDayComplete(i)) return i;
+  return TOTAL_DIAS;
+}
+
+function toggleItem(dayNum, itemId){
+  const day = getDay(dayNum);
+  day[itemId] = !day[itemId];
+  saveChecklist();
+  render();
+}
+
+function selectDay(n){
+  selectedDay = n;
+  render();
+  const el = document.getElementById('day-pill-' + n);
+  if(el) el.scrollIntoView({behavior:'smooth', inline:'center', block:'nearest'});
+}
+
+function goDay(delta){
+  const n = Math.min(TOTAL_DIAS, Math.max(1, selectedDay + delta));
+  selectDay(n);
+}
+
+function renderChecklist(){
+  const completeDays = countCompleteDays();
+  const pct = Math.round((completeDays / TOTAL_DIAS) * 100);
+  const day = getDay(selectedDay);
+  const score = scoreOfDay(selectedDay);
+  const total = PROTOCOLO_DATA.checkItems.length;
+
+  let pillsHtml = '';
+  for(let i = 1; i <= TOTAL_DIAS; i++){
+    const cls = ['day-pill'];
+    if(i === selectedDay) cls.push('selected');
+    if(isDayComplete(i)) cls.push('complete');
+    pillsHtml += `<div id="day-pill-${i}" class="${cls.join(' ')}" onclick="selectDay(${i})">${i}</div>`;
+  }
+
+  const itemsHtml = PROTOCOLO_DATA.checkItems.map(it => `
+    <div class="check-card ${day[it.id] ? 'done' : ''}" onclick="toggleItem(${selectedDay}, '${it.id}')">
+      <span class="check-icon">${it.icone}</span>
+      <span class="check-label">${it.label}</span>
+      <div class="check-tick">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#15130F" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+      </div>
+    </div>
+  `).join('');
+
+  return `
+    <header>
+      <div class="brand">Protocolo T</div>
+      <div class="brand-sub">60 dias rumo a 1K de testosterona</div>
+    </header>
+
+    <div class="progress-panel">
+      <div class="progress-ring-holder">
+        <div class="progress-ring" style="--pct:${pct}">
+          <div class="progress-ring-inner"><div class="progress-ring-num">${pct}%</div></div>
+        </div>
+      </div>
+      <div class="progress-info">
+        <div class="progress-title">Dias completos (7/7)</div>
+        <div class="progress-days">${completeDays} / ${TOTAL_DIAS}</div>
+      </div>
+    </div>
+
+    <div class="day-scroll">${pillsHtml}</div>
+
+    <div class="day-panel">
+      <div class="day-panel-head">
+        <div class="day-panel-title">Dia ${selectedDay}</div>
+        <div class="day-panel-score">${score}/${total}</div>
+      </div>
+      ${itemsHtml}
+      <div class="nav-buttons">
+        <button class="nav-btn" onclick="goDay(-1)">‹ Dia anterior</button>
+        <button class="nav-btn" onclick="goDay(1)">Próximo dia ›</button>
+      </div>
+    </div>
+
+    <footer>Não é sobre um dia perfeito. É sobre <strong>60 dias de contexto</strong> — o corpo responde ao que você repete, não ao que você faz uma vez.</footer>
+  `;
+}
+
+function toggleGuia(idx){
+  openGuiaIdx = (openGuiaIdx === idx) ? null : idx;
+  render();
+}
+
+function renderGuia(){
+  const cardsHtml = PROTOCOLO_DATA.guia.map((cap, idx) => {
+    const isOpen = openGuiaIdx === idx;
+    const bulletsHtml = cap.bullets.map(b => `<div class="guia-bullet">${b}</div>`).join('');
+    const dicasHtml = cap.dicas && cap.dicas.length ? `
+      <div class="guia-sec-title">Como aplicar</div>
+      ${cap.dicas.map(d => `<div class="guia-bullet">${d}</div>`).join('')}
+    ` : '';
+    return `
+      <div class="guia-card ${isOpen ? 'open' : ''}">
+        <div class="guia-head" onclick="toggleGuia(${idx})">
+          <span class="guia-head-icon">${cap.icone}</span>
+          <span class="guia-head-title">${cap.titulo}</span>
+          <span class="guia-chevron">▼</span>
+        </div>
+        <div class="guia-body">
+          ${bulletsHtml}
+          ${dicasHtml}
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  return `
+    <div class="page-title">Guia do Protocolo</div>
+    <div class="page-sub">Os pilares e as dicas do manual, sempre à mão.</div>
+    ${cardsHtml}
+    <footer>Baseado no Manual da Testosterona (Cado Tavares) — resumo pra consulta rápida, não substitui a leitura completa.</footer>
+  `;
+}
+
+function switchTab(tab){
+  currentTab = tab;
+  render();
+  window.scrollTo(0,0);
+}
+
+function render(){
+  const app = document.getElementById('app');
+  app.innerHTML = currentTab === 'checklist' ? renderChecklist() : renderGuia();
+  document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.tab === currentTab));
+}
+
+function init(){
+  loadAll();
+  selectedDay = firstIncompleteDay();
+  document.getElementById('tabbar').style.display = 'flex';
+  render();
+  setTimeout(() => {
+    const el = document.getElementById('day-pill-' + selectedDay);
+    if(el) el.scrollIntoView({behavior:'auto', inline:'center', block:'nearest'});
+  }, 50);
+}
+
+init();
+</script>
+</body>
+</html>
