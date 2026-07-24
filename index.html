@@ -8,10 +8,6 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Protocolo T">
 <meta name="theme-color" content="#15130F">
-<link rel="apple-touch-icon" href="apple-touch-icon.png">
-<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
-<link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
-<link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
 <title>Protocolo T</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -158,6 +154,14 @@
   .cal-summary-num{font-family:'IBM Plex Mono',monospace; font-size:22px; font-weight:600; color:var(--amber-light);}
   .cal-summary-label{font-size:10px; color:var(--bone-muted); letter-spacing:0.5px; text-transform:uppercase; margin-top:3px;}
 
+  .backup-bar{display:flex; gap:8px; margin-bottom:18px;}
+  .backup-btn{
+    flex:1; background:var(--bg-card); border:1px solid var(--line); border-radius:10px;
+    color:var(--bone-muted); font-size:12px; padding:10px; cursor:pointer; display:flex;
+    align-items:center; justify-content:center; gap:6px;
+  }
+  .backup-btn:active{border-color:var(--amber);}
+
   .loading{text-align:center; padding:60px 0; color:var(--bone-muted); font-family:'IBM Plex Mono',monospace; font-size:13px;}
 
   @media (max-width:420px){ .brand{font-size:32px;} }
@@ -165,6 +169,7 @@
 </head>
 <body>
 <div class="wrap" id="app"><div class="loading">carregando...</div></div>
+<input type="file" id="backup-file-input" accept="application/json" style="display:none" onchange="handleImportFile(event)">
 <div class="tabbar" id="tabbar" style="display:none">
   <button class="tab-btn" data-tab="checklist" onclick="switchTab('checklist')"><span class="tab-icon">✅</span>CHECKLIST</button>
   <button class="tab-btn" data-tab="calendario" onclick="switchTab('calendario')"><span class="tab-icon">📅</span>CALENDÁRIO</button>
@@ -262,6 +267,58 @@ function countCompleteDays(){
   return c;
 }
 
+function exportBackup(){
+  const backup = {
+    app: 'protocolo-t',
+    exportedAt: new Date().toISOString(),
+    startDate: startDate,
+    checklist: checklist,
+  };
+  const blob = new Blob([JSON.stringify(backup, null, 2)], {type: 'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `protocolo-t-backup-${todayISO()}.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function triggerImport(){
+  const input = document.getElementById('backup-file-input');
+  if(input) input.click();
+}
+
+function handleImportFile(event){
+  const file = event.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e){
+    try{
+      const data = JSON.parse(e.target.result);
+      if(!data.checklist || !data.startDate){
+        alert('Arquivo de backup inválido.');
+        return;
+      }
+      const ok = confirm('Isso vai substituir os dados atuais pelos do backup. Continuar?');
+      if(!ok) return;
+      checklist = data.checklist;
+      startDate = data.startDate;
+      localStorage.setItem(CHECKLIST_KEY, JSON.stringify(checklist));
+      localStorage.setItem(STARTDATE_KEY, startDate);
+      calMonthCursor = startDate.slice(0,8) + '01';
+      selectedDay = currentProtocolDay();
+      render();
+      alert('Backup restaurado com sucesso!');
+    }catch(err){
+      alert('Não consegui ler esse arquivo. Confirma que é um backup do Protocolo T.');
+    }
+  };
+  reader.readAsText(file);
+  event.target.value = '';
+}
+
 function firstIncompleteDay(){
   for(let i = 1; i <= TOTAL_DIAS; i++) if(!isDayComplete(i)) return i;
   return TOTAL_DIAS;
@@ -321,6 +378,11 @@ function renderChecklist(){
       <div class="brand">Protocolo T</div>
       <div class="brand-sub">60 dias rumo a 1K de testosterona</div>
     </header>
+
+    <div class="backup-bar">
+      <div class="backup-btn" onclick="exportBackup()">⬇️ Backup</div>
+      <div class="backup-btn" onclick="triggerImport()">⬆️ Restaurar</div>
+    </div>
 
     <div class="progress-panel">
       <div class="progress-ring-holder">
