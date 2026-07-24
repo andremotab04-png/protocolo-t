@@ -263,6 +263,11 @@ function firstIncompleteDay(){
   return TOTAL_DIAS;
 }
 
+function currentProtocolDay(){
+  const n = diffDaysISO(todayISO(), startDate) + 1;
+  return Math.min(TOTAL_DIAS, Math.max(1, n));
+}
+
 function toggleItem(dayNum, itemId){
   const day = getDay(dayNum);
   day[itemId] = !day[itemId];
@@ -495,7 +500,7 @@ function render(){
 
 function init(){
   loadAll();
-  selectedDay = firstIncompleteDay();
+  selectedDay = currentProtocolDay();
   document.getElementById('tabbar').style.display = 'flex';
   render();
   setTimeout(() => {
